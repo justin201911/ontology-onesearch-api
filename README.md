@@ -147,3 +147,5 @@ python3 run.py evaluate --output artifacts/evaluation-report.json
 ## 问题反馈
 
 欢迎在 [Issues](https://github.com/huangjia2019/ontology-fde/issues) 提供反馈。
+
+- 2026-11-10 verified by dsh-superagent
