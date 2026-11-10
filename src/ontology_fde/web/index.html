@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>云帆企业本体工作台 · 人人都是 FDE</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">云帆</div>
+      <div><h1>云帆企业本体工作台</h1><p>《企业本体论：人人都是 FDE》伴随项目</p></div>
+    </div>
+    <nav aria-label="工作台视图">
+      <button data-view="ontology" class="nav-btn active">业务对象</button>
+      <button data-view="action" class="nav-btn">退款处理</button>
+      <button data-view="audit" class="nav-btn">决策记录</button>
+      <button data-view="evaluation" class="nav-btn">测试与评估</button>
+    </nav>
+    <div class="runtime-badge"><span></span> 本机演练 · 离线运行</div>
+  </header>
+
+  <main>
+    <details class="reader-guide" open>
+      <summary>退款判定：金额、业务条件与执行权限</summary>
+      <div class="guide-body">
+        <p>自动批准要求金额不超过 500 元，且发票、履约、证据、风控和客户渠道等条件全部通过。347 元的遥控器单因发票状态未知转人工；500 元的申请 YF-R-0500 各项条件都通过，自动批准并创建付款指令。</p>
+        <p class="guide-note">批准申请、创建付款指令与资金到账分别记录。付款指令创建失败后，申请进入待付款状态，并生成财务处理任务。</p>
+      </div>
+    </details>
+    <div id="message" class="message" role="status" aria-live="polite" hidden></div>
+    <noscript><p class="message">请启用浏览器 JavaScript，才能查看业务对象和执行演练。</p></noscript>
+    <section class="hero-row">
+      <div>
+        <p class="eyebrow">云帆售后 · 退款项目</p>
+        <h2 id="viewTitle">业务对象</h2>
+        <p id="viewSubtitle" class="subtitle">退款申请关联的客户、订单、商品与证据，以及各项事实的来源。</p>
+      </div>
+      <div class="case-control">
+        <label for="caseSelect">退款申请</label>
+        <select id="caseSelect" aria-label="选择退款申请"></select>
+        <button id="resetBtn" class="ghost">重置演练</button>
+      </div>
+    </section>
+
+    <section class="metrics" id="metrics" aria-label="演练概况">
+      <article><small>示例来源系统</small><strong id="sourceCount">—</strong><span>本地样例，按源系统保留编号</span></article>
+      <article><small>关联业务对象</small><strong id="nodeCount">—</strong><span>随选中的退款申请变化</span></article>
+      <article><small>自动批准金额上限</small><strong>500 元</strong><span>金额达标还要通过证据、风控等检查</span></article>
+      <article><small>核心基线用例</small><strong id="goldenCount">—</strong><span>通过数 / 用例总数</span></article>
+    </section>
+
+    <section id="view-ontology" class="view active">
+      <div class="grid-main">
+        <article class="panel graph-panel">
+          <div class="panel-head"><div><span class="step">对象</span><h3>业务对象及其关系</h3></div><span class="hint">保留原始业务编号</span></div>
+          <svg id="graph" viewBox="0 0 1200 510" role="img" aria-label="当前退款申请的业务对象关系图"></svg>
+          <div id="graphLegend" class="legend"></div>
+          <p class="panel-note">ERP 未查到发票时，状态为 unknown，自动批准转为人工核实。</p>
+        </article>
+        <article class="panel facts-panel">
+          <div class="panel-head"><div><span class="step">事实</span><h3>退款事实与证据</h3></div><span class="hint">当前模拟状态</span></div>
+          <div id="factSummary" class="fact-summary"></div>
+          <h4>来源记录</h4><div id="sourceRefs" class="source-list"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="view-action" class="view">
+      <div class="pipeline" id="pipeline">
+        <div class="stage"><b>1</b><span>读取 · Read</span><small>读取来源，不改业务状态</small></div><i>→</i>
+        <div class="stage"><b>2</b><span>建议 · Draft</span><small>核对规则，不执行建议</small></div><i>→</i>
+        <div class="stage"><b>3</b><span>执行 · Write</span><small>检查授权与条件，执行动作</small></div>
+      </div>
+      <div class="grid-action">
+        <article class="panel action-card">
+          <div class="panel-head"><div><span class="step">动作</span><h3>处理退款申请</h3></div><span class="identity-chip">执行主体 · agent.cs.refund.001</span></div>
+          <div id="caseBanner" class="case-banner"></div>
+          <div class="mode-buttons">
+            <button data-mode="read">读取事实 · Read</button>
+            <button data-mode="draft">生成建议 · Draft</button>
+            <button data-mode="write" class="primary">执行模拟 · Write</button>
+          </div>
+          <label class="failure-toggle"><input id="paymentFailure" type="checkbox"> 模拟付款指令创建失败</label>
+          <p class="panel-note">Write 重新读取事实并检查规则。批准后创建模拟付款指令；条件不满足时转人工、补证或拒绝执行。</p>
+          <div id="actionOutcome" class="outcome empty" aria-live="polite">尚无处理结果。</div>
+        </article>
+        <article class="panel checks-card">
+          <div class="panel-head"><div><span class="step">边界</span><h3>规则检查</h3></div><span class="hint">由程序执行</span></div>
+          <div class="threshold"><span>≤ 500 元：继续检查</span><div><i></i></div><span>&gt; 500 元：转人工</span><b>500 元</b></div>
+          <div id="checks" class="checks"></div><div id="rules" class="rules"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="view-audit" class="view">
+      <div class="grid-audit">
+        <article class="panel trace-panel">
+          <div class="panel-head"><div><span class="step">追溯</span><h3>本次决策</h3></div><span id="traceIdBadge" class="hint">尚无记录</span></div>
+          <div id="auditHeadline" class="audit-headline empty">尚无决策记录。Read 只返回事实；Draft 和 Write 产生决策记录。</div>
+          <div id="auditTrace" class="audit-trace"></div>
+          <div class="tool-call-head"><h4>工具调用顺序</h4><span>状态 · 模拟耗时 · 对象</span></div>
+          <div id="toolCalls" class="tool-calls"></div><div id="agentConflict" class="agent-conflict"></div>
+        </article>
+        <article class="panel json-panel">
+          <div class="panel-head"><div><span class="step">JSON</span><h3>完整决策记录</h3></div><button id="copyAudit" class="ghost small">复制记录</button></div>
+          <p class="panel-note">包含执行主体、来源、规则、前后状态及工具调用结果。</p>
+          <pre id="auditJson">{ "status": "waiting_for_decision" }</pre>
+        </article>
+      </div>
+    </section>
+
+    <section id="view-evaluation" class="view">
+      <div class="grid-eval">
+        <article class="panel golden-panel">
+          <div class="panel-head"><div><span class="step">基线</span><h3>规则回归测试</h3></div><span id="evalBadge" class="pass-badge">正在加载</span></div>
+          <div id="evalRing" class="eval-ring"><strong>—</strong><span>用例通过率</span></div>
+          <div id="categoryBars" class="category-bars"></div>
+          <div class="incident-row"><span>故障回放</span><strong id="incidentCount">—</strong><small>渠道字段缺失 / 大小写归一化</small></div>
+          <p class="panel-note">固定样例直接测试策略判断。状态写入、幂等与失败补偿由执行器测试验证。</p>
+        </article>
+        <article class="panel rule-panel">
+          <div class="panel-head"><div><span class="step">候选规则</span><h3>从文档到规则</h3></div><span id="ruleState" class="review-badge">待业务审核</span></div>
+          <p class="rule-note">候选规则：已开封耗材签收超过 24 小时，转人工复核。时间条件比较申请创建时间与签收时间；开封状态的输入仍待补齐。</p>
+          <div id="ruleLayers" class="rule-layers"></div>
+          <h4>验证结果</h4><div id="validationGrid" class="validation-grid"></div>
+          <h4>测试样例</h4><div id="ruleCases" class="rule-cases"></div>
+          <div id="executionGuard" class="execution-guard"></div>
+        </article>
+      </div>
+    </section>
+    <p class="session-note">服务运行期间会保留业务修改：在一个页面批准申请后，其他页面再次查询也会看到已批准的状态。刷新页面会清空当前决策显示，但保留业务修改；重置演练或重启服务才恢复初始样例。</p>
+  </main>
+  <footer><span>云帆退款项目 · 本地教学演练</span><span>Read / Draft 不改业务状态 · Write 不发起真实支付</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+# 第 8 站：退款助手同意，风控要求复核
+
+`YF-R-0610` 申请 280 元，证据、履约和发票条件允许退款助手提出批准建议。但风控发现同一设备短时间内出现多次售后申请，给出 `review`。最终应该保留两个意见，并按约定转人工处理。
+
+## 委托要引用业务对象
+
+接待助手如果只发送“请退 280 元”，退款助手还需要猜测订单、商品和证据属于哪笔申请。任务信封记录这些对象引用，并列出允许和禁止的动作。执行器会拒绝运行主体不在允许清单中、信封已过期的写入；动作授权另由权限策略检查，越界时命中 `G-ACTION`。`object_refs` 和 `context_scope` 目前只保存在信封中，程序不据此限制读取范围。
+
+完整[任务信封样例](08-task-envelope-YF-R-0610.json)记录：
+
+| 字段 | 本次含义 |
+|---|---|
+| `envelope_id` | `ENV-T-0610`，识别这次委托 |
+| `correlation_id` | `CORR-YF-R-0610`，关联业务过程 |
+| `sender`、`recipient` | 从接待助手委托给退款助手 |
+| `object_refs` | 指向工单、客户、订单、订单项和退款申请 |
+| `allowed_actions`、`forbidden_actions` | 本次可以做什么，不可以做什么 |
+| `context_scope`、`expires_at` | 可以使用哪些对象，委托何时过期 |
+
+信封在申请提交四小时后过期，ENV-T-0610 的到期时间是 `2026-07-10T23:18:00+08:00`。运行时默认以申请时间处理，才能演示这些历史样例的写入；若改用当前时间，它们都会因信封过期而被拒绝。要检查过期后的拒绝行为，可用 `--processing-at` 指定一个晚于到期时间的带时区时间。
+
+## 裁决后不要丢掉分歧
+
+[Agent 登记表](../../config/identity/agent_registry.yaml)列出三个角色及其关系，[冲突策略](../../config/policies/conflict_resolution.yaml)规定这条次序：
+
+```text
+RiskAgent:block > RiskAgent:review > RefundAgent:approve
+```
+
+退款助手回答的是商品、发票和金额是否满足一般条件，风控回答的是这次交易是否需要额外审查。一般条件通过，设备关联风险仍然存在；即使更多助手赞成退款，也没有解释这个风险。因此，冲突策略要求先完成风险复核，才有可能批准。当前程序以确定性逻辑生成候选意见并裁决，不调用独立模型服务。
+
+```bash
+python3 run.py run YF-R-0610 --mode write \
+  --audit artifacts/ch08-decision-records.jsonl
+python3 run.py checkpoint 8 --check
+```
+
+运行后，申请由 `pending_review` 变成 `pending_human`，创建审批材料 HAP-0610。风险核实并获得人工批准之前，暂不创建付款指令。结果中的 `agent_candidates` 保留两个意见，`conflict_resolution` 记录哪项意见被采用、哪项被覆盖，以及裁决策略 `POL-AGENT-CONFLICT-001`。
+
+人工复核时打开这次决策记录，可以从 `checks` 看到常规检查通过，从 `agent_candidates` 和 `conflict_resolution` 看到待处理的设备关联风险。本地 HAP-0610 只记录申请编号、金额、转人工原因、状态和创建时间，不包含这些检查和候选意见。接入真实审批系统时，应关联决策记录及其证据，方便审核人核对；只留下“转人工”，接手人就要重新查找前面核对过的材料。
+
+JSONL 文件追加保存本次判断与执行结果，供之后查看。重新运行命令时，申请数据仍从初始样例文件读取，详见[状态与审计](../architecture.md#本地状态时间与审计)。
+
+## 优先级从哪里来
+
+本项目约定风险复核优先于自动批准，是因为一般条件满足并不能排除异常交易。若换成合同争议，裁决还可能需要法务意见，不能照搬这个排序。应由业务负责人确定各类意见的适用范围，再写入冲突策略和测试。
+
+[下一站：评估与复盘](09-evaluation-audit-and-incident-replay.md) · [返回十站目录](../book-map.md)。
